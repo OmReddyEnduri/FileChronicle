@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "filechronicle"
+version = "0.1.0"
+description = "Local-first universal file intelligence, differential snapshot engine, and revision recovery system."
+readme = "README.md"
+authors = [
+    { name = "OmReddyEnduri" }
+]
+license = { text = "MIT" }
+requires-python = ">=3.8"
+keywords = ["file-tracking", "snapshots", "differential-diff", "version-control", "local-first", "sqlite"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: System :: Archiving",
+    "Topic :: Utilities",
+]
+
+[project.scripts]
+chronicle = "filechronicle.cli:main"
