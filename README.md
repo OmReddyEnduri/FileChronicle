@@ -1,78 +1,150 @@
-# 📜 FileChronicle
+# FileChronicle
 
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Architecture: Local-First](https://img.shields.io/badge/architecture-local--first-green.svg)]()
-[![Database: SQLite WAL](https://img.shields.io/badge/storage-SQLite%20WAL-orange.svg)](https://www.sqlite.org/wal.html)
+[![Python Version](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/)
+[![Storage](https://img.shields.io/badge/storage-SQLite%20WAL-success.svg)](https://sqlite.org/)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Architecture](https://img.shields.io/badge/architecture-local--first-orange.svg)]()
 
-> **Local-first universal file intelligence, differential snapshot engine, and revision recovery system.**
+> Local-first file intelligence, differential snapshot engine, and revision recovery system.
 
-FileChronicle is a lightweight, high-performance file versioning and tracking utility that operates completely locally on your workstation. It captures point-in-time differential snapshots of your directories, computes unified line diffs, compresses content with zlib into a deduplicated SQLite blob store, and lets you inspect and restore any previous version instantly.
-
----
-
-## ✨ Features
-
-- **📸 Instant Differential Snapshots**: Captures directory states with file change tracking (added, modified, deleted) and SHA-256 integrity verification.
-- **🗜️ Content-Addressable Blob Storage**: Files are compressed (zlib) and deduplicated using SHA-256 hashes inside an embedded SQLite database (`~/.filechronicle/chronicle.db`).
-- **🔍 Visual Unified Diffing**: Generates colored, terminal-friendly unified diffs comparing any two snapshots or working directory modifications.
-- **⏮️ Safe File Restoration**: Roll back any single file or directory to a specific snapshot with automatic backup protection (`.bak` fallback).
-- **🚫 Smart Ignore Engine**: Supports project `.chronicleignore` files plus built-in exclusion rules for `.git`, `node_modules`, virtual environments, and caches.
-- **⚡ Terminal Workstation**: Comprehensive CLI offering `init`, `snapshot`, `status`, `diff`, `history`, `restore`, `log`, `cat`, and `projects`.
+FileChronicle is a zero-dependency, local-first differential snapshot engine designed to record, track, and restore file states across development workspaces. It combines SHA-256 content addressing, line-level unified diffs, and compressed SQLite blob storage.
 
 ---
 
-## 🚀 Installation
+## Key Features
+
+- **Local-First & Offline**: All records are retained locally in SQLite (`~/.filechronicle/chronicle.db`).
+- **Content-Addressable Blobs**: SHA-256 deduplication and zlib compression.
+- **Differential Snapshots**: Line diffs (+/- additions and removals).
+- **Safe Recovery**: Restore files with automatic backup (`.bak`) preservation.
+- **Project Tracking**: Manage multiple independent workspaces from one CLI.
+- **Zero External Dependencies**: Pure Python standard library.
+
+---
+
+## Architecture Diagram
+
+```
++-------------------------------------------------------------+
+|                     Working Workspace                       |
+|         (src/, docs/, tests/, .chronicleignore)             |
++------------------------------+------------------------------+
+                               |
+                   [ chronicle snapshot ]
+                               |
+                               v
++-------------------------------------------------------------+
+|                     FileChronicle Engine                    |
+|   - Path Normalization & Ignore Pattern Evaluator           |
+|   - 64KB Streaming SHA-256 Hasher & Binary Detection        |
+|   - Line-by-Line Differ (difflib unified diff)              |
+|   - zlib Compression & Blob Deduplication                   |
++------------------------------+------------------------------+
+                               |
+                               v
++-------------------------------------------------------------+
+|            SQLite Engine (~/.filechronicle/chronicle.db)    |
+|   - projects       : tracked root directories               |
+|   - snapshots      : metadata, tags, change counters        |
+|   - file_revisions : rel_path, hashes, unified diff cache   |
+|   - blobs          : content-addressable zlib payload       |
++-------------------------------------------------------------+
+```
+
+---
+
+## Installation & Setup
+
+FileChronicle runs on Python 3.8+:
 
 ```bash
-# Clone the repository
 git clone https://github.com/OmReddyEnduri/FileChronicle.git
 cd FileChronicle
-
-# Install locally
 pip install -e .
 ```
 
----
-
-## 🛠️ CLI Quickstart
+Or run directly without installation:
 
 ```bash
-# Initialize tracking for current directory
-chronicle init . --name "MyProject"
+python -m filechronicle.cli --help
+```
 
-# Capture a snapshot with a message
-chronicle snapshot -m "Initial commit"
+---
 
-# Check working directory changes
+## Command Reference
+
+### 1. Initialize Tracking
+Initialize tracking for the current directory or a specified folder:
+
+```bash
+chronicle init
+chronicle init /path/to/project --name "MyService"
+```
+
+### 2. Take a Snapshot
+Capture a point-in-time differential snapshot:
+
+```bash
+chronicle snapshot -m "Implemented authentication module"
+```
+
+### 3. Check Workspace Status
+Inspect untracked, modified, or deleted files:
+
+```bash
 chronicle status
-
-# View unified diff between snapshots
-chronicle diff 1 2
-
-# Inspect revision history of a specific file
-chronicle history src/main.py
-
-# Restore previous file version safely
-chronicle restore src/main.py --snapshot 1
-
-# Print file content from a historical snapshot
-chronicle cat src/main.py --snapshot 1
+chronicle status --all
 ```
 
----
-
-## 🧪 Running Automated Tests
+### 4. Inspect Differential Diffs
+Show unified diff between two snapshots:
 
 ```bash
-python -m unittest discover -v tests
+chronicle diff 1 2
+chronicle diff snap-20261121-110000 snap-20261121-120000 --file src/app.py
 ```
 
-21 automated unit tests cover hashing, binary detection, differ, SQLite deduplication, directory traversal, ignore resolution, unicode/emoji handling, and CLI command execution.
+### 5. File History
+View all recorded changes and diff metrics for a file:
+
+```bash
+chronicle history src/app.py
+```
+
+### 6. Restore File Version
+Safely roll back a file to an earlier snapshot:
+
+```bash
+# Safely restore (creates .bak if modified)
+chronicle restore src/app.py 1
+
+# Force overwrite without backup
+chronicle restore src/app.py 1 --force
+
+# Restore to alternative location
+chronicle restore src/app.py 1 --output src/app_recovered.py
+```
+
+### 7. Snapshot Log
+List historical snapshot tags, dates, and summaries:
+
+```bash
+chronicle log
+chronicle projects
+```
 
 ---
 
-## 📄 License
+## Testing
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.  
-Copyright (c) 2026 OmReddyEnduri
+Run the test suite:
+
+```bash
+python -m unittest discover tests -v
+```
+
+---
+
+## License
+
+MIT License (c) 2026 OmReddyEnduri.
